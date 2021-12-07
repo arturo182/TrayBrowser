@@ -12,6 +12,9 @@ class TrayMenu : public MenuBase
 
         void createContents(QFileIconProvider *iconProvider) override;
 
+    private slots:
+        void showSettingsDialog();
+
     protected:
         void mousePressEvent(QMouseEvent *ev) override;
         void mouseReleaseEvent(QMouseEvent *ev) override;

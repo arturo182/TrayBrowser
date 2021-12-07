@@ -118,6 +118,9 @@ void MenuBase::mousePressEvent(QMouseEvent *ev)
     if (ev->button() != Qt::LeftButton)
         return;
 
+    if (!activeAction())
+        return;
+
     m_dragStartPos = ev->globalPosition();
 }
 

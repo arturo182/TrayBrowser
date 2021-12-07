@@ -1,11 +1,14 @@
 # TrayBrowser
 A simple tool that sits in your system tray and offers a menu structure of all your mounted storage.
 
+ ![Example](example.png)
+
 You can double-click any drive or directory to open it in the file explorer, or you can single-click any file to open it in the default app.
 
 You can also right-click a drive, directory, or file to get a context menu for it. On Windows this is the default context menu for that entry, on Linux and Mac, it's a custom menu.
 If someone knows how to get the default context menu for those platforms, please let me know.
 
+Lastly, you can drag a folder or file outside the menu to move/copy/link it somewhere else.
 
 ## Regarding the code
 Qt does QMenu events a bit weirdly.

@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName("TrayBrowser");
 
     QApplication app(argc, argv);
+    app.setQuitOnLastWindowClosed(false);
 
     QFileIconProvider iconProvider;
 
