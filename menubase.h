@@ -10,6 +10,7 @@ class MenuBase : public QMenu
 
     public:
         MenuBase();
+        ~MenuBase() override;
 
         virtual void createContents(QFileIconProvider *iconProvider) = 0;
 
@@ -24,6 +25,4 @@ class MenuBase : public QMenu
 
     private:
         QPointF m_dragStartPos;
-//        bool m_buttonDown;
-//        bool m_dragging;
 };

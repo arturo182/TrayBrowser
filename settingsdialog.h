@@ -1,5 +1,7 @@
 #pragma once
 
+#include "traymenu.h"
+
 #include <QDialog>
 
 namespace Ui
@@ -21,6 +23,18 @@ class SettingsDialog : public QDialog
         QStringList hiddenVolumes() const;
         void setHiddenVolumes(const QStringList &volumes);
 
+        TrayIconSource trayIconSource() const;
+        void setTrayIconSource(const TrayIconSource &source);
+
+        QString trayIconFile() const;
+        void setTrayIconFile(const QString &fileName);
+
+        bool dirsFirst() const;
+        void setDirsFirst(const bool dirsFirst);
+
+        bool ignoreCase() const;
+        void setIgnoreCase(const bool ignoreCase);
+
     signals:
         void applyClicked();
 
@@ -28,11 +42,13 @@ class SettingsDialog : public QDialog
         void addCustomItem(const QString &dir);
 
     private slots:
+        void browseUserTrayIcon();
         void updateCustomItemButtons();
-        void on_addCustomItemButton_clicked();
-        void on_deleteCustomItemButton_clicked();
-        void on_upCustomItemButton_clicked();
-        void on_downCustomItemButton_clicked();
+        void browseAndAddCustomItem();
+        void deleteSelectedCustomItem();
+        void moveSelectedCustomItemUp();
+        void moveSelectedCustomItemDown();
+        void openCurrentItemsDir();
 
     private:
         Ui::SettingsDialog *m_ui;

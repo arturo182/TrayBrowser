@@ -8,11 +8,12 @@
 #include <QMouseEvent>
 #include <QSettings>
 #include <QStorageInfo>
+#include <QTimer>
 #include <QUrl>
 
 TrayMenu::TrayMenu()
 {
-
+    QTimer::singleShot(100, this, [&]() { emit settingsApplied(); });
 }
 
 TrayMenu::~TrayMenu()
@@ -76,12 +77,22 @@ void TrayMenu::showSettingsDialog()
     {
         dlg.setCustomItems(set.value("customItems").toStringList());
         dlg.setHiddenVolumes(set.value("hiddenVolumes").toStringList());
+        dlg.setTrayIconSource(static_cast<TrayIconSource>(set.value("iconSource").toInt()));
+        dlg.setTrayIconFile(set.value("iconFile").toString());
+        dlg.setDirsFirst(set.value("dirsFirst", true).toBool());
+        dlg.setIgnoreCase(set.value("ignoreCase", true).toBool());
     };
 
     const auto applySettings = [&]()
     {
         set.setValue("customItems", dlg.customItems());
         set.setValue("hiddenVolumes", dlg.hiddenVolumes());
+        set.setValue("iconSource", dlg.trayIconSource());
+        set.setValue("iconFile", dlg.trayIconFile());
+        set.setValue("dirsFirst", dlg.dirsFirst());
+        set.setValue("ignoreCase", dlg.ignoreCase());
+
+        emit settingsApplied();
     };
     connect(&dlg, &SettingsDialog::applyClicked, &dlg, applySettings);
 

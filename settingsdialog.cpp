@@ -1,8 +1,13 @@
 #include "settingsdialog.h"
 #include "ui_settingsdialog.h"
+#include "version.h"
 
+#include <QDesktopServices>
 #include <QFileDialog>
 #include <QFileIconProvider>
+#include <QImageReader>
+#include <QLibraryInfo>
+#include <QSettings>
 #include <QStorageInfo>
 
 SettingsDialog::SettingsDialog(QWidget *parent)
@@ -11,7 +16,33 @@ SettingsDialog::SettingsDialog(QWidget *parent)
 {
     m_ui->setupUi(this);
 
-    connect(m_ui->customItemTree, &QTreeWidget::currentItemChanged, this, &SettingsDialog::updateCustomItemButtons);
+    const auto updateTrayIconWidgets = [&]()
+    {
+        const bool isUser = m_ui->trayIconUserRadio->isChecked();
+
+        m_ui->trayIconPathEdit->setEnabled(isUser);
+        m_ui->trayIconBrowseButton->setEnabled(isUser);
+    };
+
+    connect(m_ui->trayIconAppRadio,  &QRadioButton::toggled, this, updateTrayIconWidgets);
+    connect(m_ui->trayIconOsRadio,   &QRadioButton::toggled, this, updateTrayIconWidgets);
+    connect(m_ui->trayIconUserRadio, &QRadioButton::toggled, this, updateTrayIconWidgets);
+    connect(m_ui->trayIconBrowseButton, &QPushButton::clicked, this, &SettingsDialog::browseUserTrayIcon);
+    connect(m_ui->trayIconPathEdit, &QLineEdit::textChanged, this, [&](const QString &text)
+    {
+        const bool fileExists = QFileInfo::exists(text);
+        m_ui->trayIconPathEdit->setStyleSheet(QString("color: %1;").arg(fileExists ? "black" : "red"));
+    });
+
+    connect(m_ui->addCustomItemButton,    &QToolButton::clicked, this, &SettingsDialog::browseAndAddCustomItem);
+    connect(m_ui->deleteCustomItemButton, &QToolButton::clicked, this, &SettingsDialog::deleteSelectedCustomItem);
+    connect(m_ui->upCustomItemButton,     &QToolButton::clicked, this, &SettingsDialog::moveSelectedCustomItemUp);
+    connect(m_ui->downCustomItemButton,   &QToolButton::clicked, this, &SettingsDialog::moveSelectedCustomItemDown);
+
+    connect(m_ui->customItemTree,   &QTreeWidget::currentItemChanged, this, &SettingsDialog::updateCustomItemButtons);
+    connect(m_ui->customItemTree,   &QTreeWidget::doubleClicked,      this, &SettingsDialog::openCurrentItemsDir);
+    connect(m_ui->hiddenVolumeTree, &QTreeWidget::doubleClicked,      this, &SettingsDialog::openCurrentItemsDir);
+
     connect(m_ui->buttonBox, &QDialogButtonBox::clicked, this, [&](QAbstractButton *button)
     {
         const auto stdButton = m_ui->buttonBox->standardButton(button);
@@ -21,7 +52,7 @@ SettingsDialog::SettingsDialog(QWidget *parent)
         emit applyClicked();
     });
 
-
+    // fill volume list
     for (const auto &info : QStorageInfo::mountedVolumes()) {
         QString label = info.displayName();
 
@@ -36,11 +67,31 @@ SettingsDialog::SettingsDialog(QWidget *parent)
         treeItem->setData(0, Qt::UserRole, info.rootPath());
         treeItem->setCheckState(0, Qt::Unchecked);
     }
+
+    m_ui->aboutTextLabel->setText(tr("<h3>TrayBrowser %1.%2</h3>"
+                                     "Based on Qt %3<br><br>"
+                                     "Built on %4 %5<br><br>"
+                                     "Copyright %6 © arturo182<br><br>"
+                                     "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, "
+                                     "EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF "
+                                     "MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.")
+                                  .arg(VER_MAJOR)
+                                  .arg(VER_MINOR)
+                                  .arg(QLibraryInfo::version().toString())
+                                  .arg(__DATE__).arg(__TIME__)
+                                  .arg(QDateTime::currentDateTime().date().year()));
+
+    QSettings sett;
+    m_lastBrowseDir = sett.value("lastBrowseDir").toString();
 }
 
 SettingsDialog::~SettingsDialog()
 {
+    QSettings sett;
+    sett.setValue("lastBrowseDir", m_lastBrowseDir);
+
     delete m_ui;
+    m_ui = nullptr;
 }
 
 QStringList SettingsDialog::customItems() const
@@ -94,6 +145,64 @@ void SettingsDialog::setHiddenVolumes(const QStringList &volumes)
     }
 }
 
+TrayIconSource SettingsDialog::trayIconSource() const
+{
+    if (m_ui->trayIconAppRadio->isChecked())
+        return TrayIconSource::App;
+
+    if (m_ui->trayIconOsRadio->isChecked())
+        return TrayIconSource::Os;
+
+    return TrayIconSource::User;
+}
+
+void SettingsDialog::setTrayIconSource(const TrayIconSource &source)
+{
+    switch (source) {
+    case TrayIconSource::App:
+        m_ui->trayIconAppRadio->setChecked(true);
+        break;
+
+    case TrayIconSource::Os:
+        m_ui->trayIconOsRadio->setChecked(true);
+        break;
+
+    default:
+        m_ui->trayIconUserRadio->setChecked(true);
+        break;
+    }
+}
+
+QString SettingsDialog::trayIconFile() const
+{
+    return m_ui->trayIconPathEdit->text();
+}
+
+void SettingsDialog::setTrayIconFile(const QString &fileName)
+{
+    m_ui->trayIconPathEdit->setText(fileName);
+}
+
+bool SettingsDialog::dirsFirst() const
+{
+    return m_ui->dirsFirstCheckBox->isChecked();
+}
+
+void SettingsDialog::setDirsFirst(const bool dirsFirst)
+{
+    m_ui->dirsFirstCheckBox->setChecked(dirsFirst);
+}
+
+bool SettingsDialog::ignoreCase() const
+{
+    return m_ui->ignoreCaseCheckBox->isChecked();
+}
+
+void SettingsDialog::setIgnoreCase(const bool ignoreCase)
+{
+    m_ui->ignoreCaseCheckBox->setChecked(ignoreCase);
+}
+
 void SettingsDialog::addCustomItem(const QString &dir)
 {
     QFileIconProvider iconProvider;
@@ -103,6 +212,22 @@ void SettingsDialog::addCustomItem(const QString &dir)
     treeItem->setText(0, info.completeBaseName());
     treeItem->setIcon(0, iconProvider.icon(info));
     treeItem->setData(0, Qt::UserRole, dir);
+}
+
+void SettingsDialog::browseUserTrayIcon()
+{
+    QString filters = "Images (";
+    for (const QByteArray &type : QImageReader::supportedImageFormats())
+        filters += QString(" *.%1").arg(type);
+    filters += ")";
+
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Select icon"), m_lastBrowseDir, filters);
+    if (fileName.isEmpty())
+        return;
+
+    m_ui->trayIconPathEdit->setText(fileName);
+
+    m_lastBrowseDir = QFileInfo(fileName).absolutePath();
 }
 
 void SettingsDialog::updateCustomItemButtons()
@@ -119,7 +244,7 @@ void SettingsDialog::updateCustomItemButtons()
     m_ui->downCustomItemButton->setEnabled(canMoveDown);
 }
 
-void SettingsDialog::on_addCustomItemButton_clicked()
+void SettingsDialog::browseAndAddCustomItem()
 {
     const QString dir = QFileDialog::getExistingDirectory(this, tr("Add custom item"), m_lastBrowseDir);
     if (dir.isEmpty())
@@ -132,7 +257,7 @@ void SettingsDialog::on_addCustomItemButton_clicked()
     updateCustomItemButtons();
 }
 
-void SettingsDialog::on_deleteCustomItemButton_clicked()
+void SettingsDialog::deleteSelectedCustomItem()
 {
     QTreeWidgetItem *current = m_ui->customItemTree->currentItem();
     if (!current)
@@ -143,7 +268,7 @@ void SettingsDialog::on_deleteCustomItemButton_clicked()
     updateCustomItemButtons();
 }
 
-void SettingsDialog::on_upCustomItemButton_clicked()
+void SettingsDialog::moveSelectedCustomItemUp()
 {
     QTreeWidget *tree = m_ui->customItemTree;
 
@@ -157,11 +282,12 @@ void SettingsDialog::on_upCustomItemButton_clicked()
 
     tree->takeTopLevelItem(idx);
     tree->insertTopLevelItem(idx - 1, current);
+    tree->setCurrentItem(current);
 
     updateCustomItemButtons();
 }
 
-void SettingsDialog::on_downCustomItemButton_clicked()
+void SettingsDialog::moveSelectedCustomItemDown()
 {
     QTreeWidget *tree = m_ui->customItemTree;
 
@@ -175,6 +301,21 @@ void SettingsDialog::on_downCustomItemButton_clicked()
 
     tree->takeTopLevelItem(idx);
     tree->insertTopLevelItem(idx + 1, current);
+    tree->setCurrentItem(current);
 
     updateCustomItemButtons();
+}
+
+void SettingsDialog::openCurrentItemsDir()
+{
+    QTreeWidget *tree = qobject_cast<QTreeWidget*>(sender());
+    if (!tree)
+        return;
+
+    QTreeWidgetItem *current = tree->currentItem();
+    if (!current)
+        return;
+
+    const QString dir = current->data(0, Qt::UserRole).toString();
+    QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
 }

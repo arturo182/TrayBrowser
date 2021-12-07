@@ -24,3 +24,7 @@ Qt does QMenu events a bit weirdly.
 If you click an action that has a menu attached but the menu is not shown, the click event for that action will be sent to the menu that contains the action.
 But if the action's menu is showing and you click the action, the menu of the action will receive the event. Even though it's the same action that was clicked in both instances.
 This makes the code a bit muddier than it would normally have to be because we have to take care of both scenarios.
+
+# Credits
+Silk icon set (CC BY 2.5) by Mark James
+Main icon (CC0 1.0) by Iconfinder

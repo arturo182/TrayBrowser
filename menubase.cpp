@@ -65,7 +65,7 @@ void showContextMenu(const QString &path, const QPoint &pos, void *parentWindow)
 
     IContextMenu *imenu = nullptr;
     result = ifolder->GetUIObjectOf((HWND)parentWindow, 1, (const ITEMIDLIST **)&idChild, IID_IContextMenu, 0, (void**)&imenu);
-    if (!SUCCEEDED(result) || !ifolder)
+    if (!SUCCEEDED(result))
         return;
 
     ComInterfaceReleaser menuReleaser(imenu);
@@ -100,7 +100,6 @@ void showContextMenu(const QString &path, const QPoint &pos, void *parentWindow)
 }
 #endif
 
-
 MenuBase::MenuBase()
 {
     connect(this, &QMenu::aboutToShow, [&]()
@@ -111,6 +110,11 @@ MenuBase::MenuBase()
 
         createContents(&iconProvider);
     });
+}
+
+MenuBase::~MenuBase()
+{
+
 }
 
 void MenuBase::mousePressEvent(QMouseEvent *ev)
@@ -171,14 +175,12 @@ void MenuBase::mouseReleaseEvent(QMouseEvent *ev)
 #ifdef Q_OS_WIN
         showContextMenu(path, ev->globalPosition().toPoint(), reinterpret_cast<void*>(winId()));
 #endif
-
         break;
     }
 
     default:
         break;
     }
-
 }
 
 void MenuBase::mouseDoubleClickEvent(QMouseEvent *ev)
@@ -190,7 +192,6 @@ void MenuBase::mouseDoubleClickEvent(QMouseEvent *ev)
         return;
 
     QDesktopServices::openUrl(QUrl::fromLocalFile(path));
-
 }
 
 QString MenuBase::currentPath() const

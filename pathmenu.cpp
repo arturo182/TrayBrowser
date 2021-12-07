@@ -4,6 +4,7 @@
 #include <QDesktopServices>
 #include <QFileIconProvider>
 #include <QMouseEvent>
+#include <QSettings>
 #include <QUrl>
 
 
@@ -30,8 +31,17 @@ PathMenu::~PathMenu()
 
 void PathMenu::createContents(QFileIconProvider *iconProvider)
 {
+    const QSettings set;
     const QDir dir(m_fullPath);
-    const QFileInfoList entries = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::DirsFirst | QDir::Name);
+    QDir::SortFlags sortFlags = QDir::Name;
+
+    if (set.value("dirsFirst", true).toBool())
+        sortFlags |= QDir::DirsFirst;
+
+    if (set.value("ignoreCase", true).toBool())
+        sortFlags |= QDir::IgnoreCase;
+
+    const QFileInfoList entries = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, sortFlags);
 
     if (entries.isEmpty()) {
         addAction(tr("(Empty)"));
@@ -44,7 +54,6 @@ void PathMenu::createContents(QFileIconProvider *iconProvider)
             PathMenu *menu = new PathMenu(info.absoluteFilePath(), iconProvider->icon(info));
             connect(this, &QMenu::aboutToHide, menu, &QObject::deleteLater);
             addMenu(menu);
-
         } else {
             QAction *action = addAction(iconProvider->icon(info), info.fileName());
             action->setProperty("path", info.absoluteFilePath());

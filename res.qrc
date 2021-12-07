@@ -4,5 +4,6 @@
         <file>res/icons/arrow_down.png</file>
         <file>res/icons/arrow_up.png</file>
         <file>res/icons/bin.png</file>
+        <file>res/icon.png</file>
     </qresource>
 </RCC>
