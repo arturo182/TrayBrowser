@@ -53,3 +53,5 @@ compile_commands.json
 
 # binary
 TrayBrowser
+debug/
+release/

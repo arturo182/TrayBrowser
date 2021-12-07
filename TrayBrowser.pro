@@ -3,7 +3,15 @@ CONFIG += c++20
 
 SOURCES += \
     main.cpp \
-    pathmenu.cpp
+    menubase.cpp \
+    pathmenu.cpp \
+    traymenu.cpp
 
 HEADERS += \
-    pathmenu.h
+    menubase.h \
+    pathmenu.h \
+    traymenu.h
+
+win* {
+    LIBS += -lole32
+}

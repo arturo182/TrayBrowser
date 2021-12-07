@@ -1,16 +1,19 @@
 #include "pathmenu.h"
 
-#include <QFileIconProvider>
 #include <QDebug>
-#include <QMouseEvent>
 #include <QDesktopServices>
+#include <QFileIconProvider>
+#include <QMouseEvent>
 #include <QUrl>
 
-PathMenu::PathMenu(const QString &fullPath, const QString &label)
-    : QMenu()
+
+PathMenu::PathMenu(const QString &fullPath, const QIcon &icon, const QString &label)
+    : MenuBase()
     , m_fullPath(fullPath)
 {
-    connect(this, &QMenu::aboutToShow, this, &PathMenu::fill);
+    setIcon(icon);
+
+    menuAction()->setProperty("path", fullPath);
 
     if (label.isEmpty()) {
         const QDir dir(fullPath);
@@ -25,59 +28,26 @@ PathMenu::~PathMenu()
 
 }
 
-void PathMenu::fill()
+void PathMenu::createContents(QFileIconProvider *iconProvider)
 {
-    clear();
-
-    QFileIconProvider iconProvider;
-
     const QDir dir(m_fullPath);
-    for (const auto &info : dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::DirsFirst | QDir::Name)) {
-        const bool isEmpty = QDir(info.filePath()).entryList(QDir::AllEntries | QDir::NoDotAndDotDot).isEmpty();
+    const QFileInfoList entries = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::DirsFirst | QDir::Name);
 
-        if (info.isDir() && !isEmpty) {
-            PathMenu *subMenu = new PathMenu(info.absoluteFilePath());
-            subMenu->setIcon(iconProvider.icon(info));
-            addMenu(subMenu);
+    if (entries.isEmpty()) {
+        addAction(tr("(Empty)"));
 
-            QObject::connect(this, &QMenu::aboutToHide, subMenu, &QObject::deleteLater);
+        return;
+    }
+
+    for (const auto &info : entries) {
+        if (info.isDir()) {
+            PathMenu *menu = new PathMenu(info.absoluteFilePath(), iconProvider->icon(info));
+            connect(this, &QMenu::aboutToHide, menu, &QObject::deleteLater);
+            addMenu(menu);
+
         } else {
-            QAction *action = addAction(iconProvider.icon(info), info.fileName());
-
-            if (!info.isDir())
-                action->setProperty("path", info.absoluteFilePath());
+            QAction *action = addAction(iconProvider->icon(info), info.fileName());
+            action->setProperty("path", info.absoluteFilePath());
         }
     }
-}
-
-void PathMenu::mousePressEvent(QMouseEvent *ev)
-{
-    QMenu::mousePressEvent(ev);
-
-    switch (ev->button()) {
-    case Qt::LeftButton:
-    {
-//        qDebug() << m_fullPath << activeAction() << "left click!";
-        if (activeAction()) {
-            const QString path = activeAction()->property("path").toString();
-            if (!path.isEmpty())
-                QDesktopServices::openUrl(QUrl::fromLocalFile(path));
-        }
-        break;
-    }
-
-    case Qt::RightButton:
-        qDebug() << m_fullPath << activeAction() << "right click!";
-        break;
-
-    default:
-        break;
-    }
-}
-
-void PathMenu::mouseDoubleClickEvent(QMouseEvent *ev)
-{
-    QMenu::mouseDoubleClickEvent(ev);
-
-    qDebug() << m_fullPath << activeAction() <<  "double click!";
 }

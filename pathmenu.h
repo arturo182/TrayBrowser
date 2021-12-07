@@ -1,21 +1,18 @@
 #pragma once
 
-#include <QDir>
-#include <QMenu>
+#include "menubase.h"
 
-class PathMenu : public QMenu
+#include <QDir>
+
+class PathMenu : public MenuBase
 {
     Q_OBJECT
 
     public:
-        PathMenu(const QString &fullPath, const QString &label = QString());
+        PathMenu(const QString &fullPath, const QIcon &icon = QIcon(), const QString &label = QString());
         ~PathMenu() override;
 
-        void fill();
-
-    protected:
-        void mousePressEvent(QMouseEvent *ev) override;
-        void mouseDoubleClickEvent(QMouseEvent *ev) override;
+        void createContents(QFileIconProvider *iconProvider) override;
 
     private:
         QString m_fullPath;
